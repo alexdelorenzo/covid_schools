@@ -1,0 +1,14 @@
+# aiohttp libs
+aiohttp
+aiodns
+cchardet
+
+# handle async iterables
+aiostream
+
+# sheets api
+google
+gspread_asyncio
+
+# foreign
+limiter
