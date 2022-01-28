@@ -114,6 +114,64 @@ async def download(url: str, session: ClientSession | None = None) -> str:
     return await response.text()
 
 
+def get_cases(content: str, regex: Pattern = CASES_RE) -> int | None:
+  if match := regex.search(content):
+    match match.groups():
+      case [cases] if cases.isnumeric():
+        return int(cases)
+
+  return None
+
+
+async def get_results() -> AsyncIterable[Result]:
+  schools = (
+    School(name, url)
+    for name, url in SCHOOL_URLS.items()
+  )
+
+  tasks: list[Awaitable[Result]] = [
+    school.get_cases()
+    for school in schools
+  ]
+
+  for task in as_completed(tasks):
+    yield await task
+
+
+## unused
+
+
+async def get_results_shared() -> AsyncIterable[Result]:
+  async with get_session() as session:
+    schools = (
+      School(name, url)
+      for name, url in SCHOOL_URLS.items()
+    )
+
+    tasks: list[Awaitable[Result]] = [
+      school.get_cases(session)
+      for school in schools
+    ]
+
+    for task in as_completed(tasks):
+      yield await task
+
+
+def get_cases_py39(content: str, regex: Pattern = CASES_RE) -> int | None:
+  match = regex.search(content)
+
+  if match:
+    groups = match.groups()
+
+    if len(groups) == 1:
+      [cases] = groups
+
+      if cases.isnumeric():
+        return int(cases)
+
+  return None
+
+
 async def download2(url: str, session: ClientSession | None = None) -> str:
   if session:
     async with limit_downloads, session.get(url) as response:
@@ -151,61 +209,6 @@ async def download_share_session(
   return result
 
 
-def get_cases(content: str, regex: Pattern = CASES_RE) -> int | None:
-  if match := regex.search(content):
-    match match.groups():
-      case [cases] if cases.isnumeric():
-        return int(cases)
-
-  return None
-
-
-def get_cases_py39(content: str, regex: Pattern = CASES_RE) -> int | None:
-  match = regex.search(content)
-
-  if match:
-    groups = match.groups()
-
-    if len(groups) == 1:
-      [cases] = groups
-
-      if cases.isnumeric():
-        return int(cases)
-
-  return None
-
-
-async def get_results() -> AsyncIterable[Result]:
-  schools = (
-    School(name, url)
-    for name, url in SCHOOL_URLS.items()
-  )
-
-  tasks: list[Awaitable[Result]] = [
-    school.get_cases()
-    for school in schools
-  ]
-
-  for task in as_completed(tasks):
-    yield await task
-
-
-async def get_results_shared() -> AsyncIterable[Result]:
-  async with get_session() as session:
-    schools = (
-      School(name, url)
-      for name, url in SCHOOL_URLS.items()
-    )
-
-    tasks: list[Awaitable[Result]] = [
-      school.get_cases(session)
-      for school in schools
-    ]
-
-    for task in as_completed(tasks):
-      yield await task
-
-
 async def print_results():
   async for school, cases in get_results():
     if cases is None:
@@ -214,6 +217,3 @@ async def print_results():
     else:
       print(f'{school.name} has {cases} COVID cases.')
 
-
-if __name__ == '__main__':
-  run(print_results(), debug=True)
